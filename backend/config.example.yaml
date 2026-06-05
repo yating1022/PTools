@@ -1,0 +1,17 @@
+app:
+  debug: false
+  host: 0.0.0.0
+  port: 7679
+  title: P Tools API
+  version: 0.1.0
+
+database:
+  host: 127.0.0.1
+  port: 3306
+  user: root
+  password: "your_password"
+  name: p_tools
+
+guangya:
+  access_token: ""
+  refresh_token: ""

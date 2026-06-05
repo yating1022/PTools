@@ -1,0 +1,9 @@
+**/__pycache__
+**/node_modules
+**/.git
+**/.vscode
+**/dist
+**/*.pyc
+backend/config.yaml
+frontend/node_modules
+gyDownloads

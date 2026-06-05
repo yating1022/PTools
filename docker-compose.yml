@@ -1,0 +1,11 @@
+services:
+  p-tools:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: p-tools
+    restart: unless-stopped
+    ports:
+      - "7679:7679"
+    volumes:
+      - ./backend/config.yaml:/app/config.yaml

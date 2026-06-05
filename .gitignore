@@ -1,0 +1,49 @@
+# ==========================================
+# 1. 后端 FastAPI / Python 相关排除
+# ==========================================
+# 排除 Python 编译缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# 排除 Python 虚拟环境 (根据你实际的虚拟环境目录名调整)
+venv/
+.venv/
+env/
+ENV/
+AGENTS.md
+# 排除本地环境变量配置文件（包含敏感密码、密钥，千万别传上去）
+.env
+*.local
+.claude
+.trellis
+solarpunk-hard-prompt.md
+# ==========================================
+# 2. 前端 Vue / Node.js 相关排除
+# ==========================================
+# 排除前端依赖包（体积超大，绝对不要传）
+node_modules/
+
+# 排除 Vue 打包生成的生产环境代码（每次打包都会重新生成）
+dist/
+dist-ssr/
+*.local
+
+# 排除前端日志文件
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+# ==========================================
+# 3. 操作系统与编辑器相关排除
+# ==========================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+backend/config.yaml
+gyDownloads
