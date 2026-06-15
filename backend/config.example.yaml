@@ -4,6 +4,7 @@ app:
   port: 7679
   title: P Tools API
   version: 0.1.0
+  secret_key: your-random-secret-key-here
 
 database:
   host: 127.0.0.1

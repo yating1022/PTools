@@ -29,7 +29,8 @@ RUN pip install --no-cache-dir \
     "sqlalchemy>=2.0" \
     "pymysql>=1.1" \
     "openpyxl>=3.1" \
-    "xlrd>=2.0"
+    "xlrd>=2.0" \
+    "PyJWT>=2.10"
 
 # 后端代码
 COPY backend/ ./

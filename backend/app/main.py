@@ -1,6 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 
+import jwt
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -58,6 +59,32 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def auth_gate_middleware(request: Request, call_next):
+    path = request.url.path
+    # 白名单：非 API 路径、verify 接口、health
+    if (
+        not path.startswith("/api")
+        or path == "/api/v1/verify"
+        or path == "/health"
+    ):
+        return await call_next(request)
+
+    auth = request.headers.get("authorization", "")
+    token = auth.removeprefix("Bearer ").strip() if auth.startswith("Bearer ") else ""
+    if not token:
+        return JSONResponse(status_code=401, content={"detail": "未验证，请先输入访问密钥"})
+
+    try:
+        jwt.decode(token, settings.app.secret_key, algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        return JSONResponse(status_code=401, content={"detail": "密钥已过期，请重新验证"})
+    except jwt.InvalidTokenError:
+        return JSONResponse(status_code=401, content={"detail": "无效密钥"})
+
+    return await call_next(request)
 
 
 @app.exception_handler(Exception)

@@ -4,6 +4,11 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
+      path: "/verify",
+      name: "verify",
+      component: () => import("@/views/VerifyView.vue"),
+    },
+    {
       path: "/",
       name: "home",
       component: () => import("@/views/HomeView.vue"),
@@ -34,6 +39,12 @@ const router = createRouter({
       component: () => import("@/views/gy-netdisk/GyNetdiskDailyImport.vue"),
     },
   ],
+});
+
+router.beforeEach((to) => {
+  if (to.name !== "verify" && !localStorage.getItem("p_token")) {
+    return { name: "verify" };
+  }
 });
 
 export default router;

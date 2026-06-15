@@ -1,8 +1,9 @@
 from fastapi import APIRouter
 
-from app.api.v1 import gy_auth, gy_daily_import, gy_files, gy_magnets
+from app.api.v1 import auth_gate, gy_auth, gy_daily_import, gy_files, gy_magnets
 
 router = APIRouter(prefix="/api/v1")
+router.include_router(auth_gate.router)
 router.include_router(gy_auth.router)
 router.include_router(gy_files.router)
 router.include_router(gy_magnets.router)

@@ -15,6 +15,7 @@ class AppConfig(BaseSettings):
     debug: bool = False
     title: str = "P Tools API"
     version: str = "0.1.0"
+    secret_key: str = "change-me-to-a-random-string"
 
 
 class DatabaseConfig(BaseSettings):
@@ -66,6 +67,11 @@ def save_yaml_config(data: dict) -> None:
 @lru_cache
 def get_settings() -> Settings:
     config_data = load_yaml_config()
+    # YAML 可能把纯数字值解析为 int，转成 str 兼容
+    if "app" in config_data and isinstance(config_data["app"], dict):
+        for k, v in config_data["app"].items():
+            if isinstance(v, int):
+                config_data["app"][k] = str(v)
     return Settings(**config_data)
 
 
