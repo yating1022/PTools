@@ -12,7 +12,7 @@ export function getAuthStatus(): Promise<AuthStatus> {
   return api.get("/gy/auth/status");
 }
 
-export function smsInit(phoneNumber: string, captchaToken?: string | null) {
+export function smsInit(phoneNumber: string, captchaToken?: string | null): Promise<any> {
   const form = new FormData();
   form.append("phone_number", phoneNumber);
   if (captchaToken) form.append("captcha_token", captchaToken);
@@ -23,7 +23,7 @@ export function smsSend(
   phoneNumber: string,
   captchaToken?: string | null,
   target = "ANY",
-) {
+): Promise<any> {
   const form = new FormData();
   form.append("phone_number", phoneNumber);
   if (captchaToken) form.append("captcha_token", captchaToken);
@@ -31,7 +31,7 @@ export function smsSend(
   return api.post("/gy/auth/sms/send", form);
 }
 
-export function smsVerify(verificationCode: string) {
+export function smsVerify(verificationCode: string): Promise<any> {
   const form = new FormData();
   form.append("verification_code", verificationCode);
   return api.post("/gy/auth/sms/verify", form);
@@ -41,7 +41,7 @@ export function smsSignin(
   verificationCode: string,
   verificationToken: string,
   captchaToken?: string | null,
-) {
+): Promise<any> {
   const form = new FormData();
   form.append("verification_code", verificationCode);
   form.append("verification_token", verificationToken);
@@ -49,7 +49,7 @@ export function smsSignin(
   return api.post("/gy/auth/sms/signin", form);
 }
 
-export function refreshToken() {
+export function refreshToken(): Promise<any> {
   return api.post("/gy/auth/refresh");
 }
 
