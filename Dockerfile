@@ -30,7 +30,8 @@ RUN pip install --no-cache-dir \
     "pymysql>=1.1" \
     "openpyxl>=3.1" \
     "xlrd>=2.0" \
-    "PyJWT>=2.10"
+    "PyJWT>=2.10" \
+    "python-multipart>=0.0.18"
 
 # 后端代码
 COPY backend/ ./
