@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import jwt
 from fastapi import FastAPI, Request
@@ -16,6 +17,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+_static_dir = Path(__file__).parent.parent / "static"
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,7 +26,6 @@ async def lifespan(app: FastAPI):
     import app.models  # noqa: F401 — 注册所有 ORM 模型
     init_db()
 
-    # 给 gy_magnets 表加新列（已有表 create_all 不会加列）
     from sqlalchemy import text
     with engine.begin() as conn:
         for ddl in [
@@ -33,12 +35,35 @@ async def lifespan(app: FastAPI):
             try:
                 conn.execute(text(ddl))
             except Exception:
-                pass  # 列已存在则忽略
+                pass
 
-    # 启动每日入库调度器
     from app.services.gy_daily_import_service import get_gy_daily_import_service
     svc = get_gy_daily_import_service()
     svc.start_scheduler()
+
+    # ── 静态文件服务（Docker 环境）── 在所有 API 路由之后注册
+    if _static_dir.is_dir():
+        from fastapi.staticfiles import StaticFiles
+        from starlette.responses import FileResponse
+
+        app.mount("/assets", StaticFiles(directory=str(_static_dir / "assets")), name="assets")
+
+        @app.get("/{full_path:path}")
+        async def serve_spa(full_path: str):
+            file = _static_dir / full_path
+            if file.is_file():
+                return FileResponse(str(file))
+            return FileResponse(str(_static_dir / "index.html"))
+
+        @app.get("/")
+        async def serve_root():
+            return FileResponse(str(_static_dir / "index.html"))
+
+        logger.info("Serving frontend from %s", _static_dir)
+    else:
+        @app.get("/health")
+        async def health():
+            return {"status": "healthy"}
 
     logger.info("Application starting on %s:%s", settings.app.host, settings.app.port)
     yield
@@ -64,11 +89,9 @@ app.add_middleware(
 @app.middleware("http")
 async def auth_gate_middleware(request: Request, call_next):
     path = request.url.path
-    # 白名单：非 API 路径、verify 接口、health
     if (
         not path.startswith("/api")
         or path == "/api/v1/verify"
-        or path == "/health"
     ):
         return await call_next(request)
 
@@ -97,30 +120,6 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 app.include_router(router)
-
-
-# ── Serve frontend static files (Docker) ─────────────────
-from pathlib import Path
-
-_static_dir = Path(__file__).parent.parent / "static"
-if _static_dir.is_dir():
-    from fastapi.staticfiles import StaticFiles
-    from starlette.responses import FileResponse
-
-    app.mount("/assets", StaticFiles(directory=str(_static_dir / "assets")), name="assets")
-
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        if full_path == "health":
-            return {"status": "healthy"}
-        file = _static_dir / full_path
-        if file.is_file():
-            return FileResponse(str(file))
-        return FileResponse(str(_static_dir / "index.html"))
-else:
-    @app.get("/health")
-    async def health():
-        return {"status": "healthy"}
 
 
 if __name__ == "__main__":
