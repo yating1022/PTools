@@ -5,7 +5,8 @@ from pathlib import Path
 import jwt
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.router import router
 from app.config import settings
@@ -18,6 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 _static_dir = Path(__file__).parent.parent / "static"
+_is_docker = _static_dir.is_dir()
 
 
 @asynccontextmanager
@@ -41,31 +43,7 @@ async def lifespan(app: FastAPI):
     svc = get_gy_daily_import_service()
     svc.start_scheduler()
 
-    # ── 静态文件服务（Docker 环境）── 在所有 API 路由之后注册
-    if _static_dir.is_dir():
-        from fastapi.staticfiles import StaticFiles
-        from starlette.responses import FileResponse
-
-        app.mount("/assets", StaticFiles(directory=str(_static_dir / "assets")), name="assets")
-
-        @app.get("/{full_path:path}")
-        async def serve_spa(full_path: str):
-            file = _static_dir / full_path
-            if file.is_file():
-                return FileResponse(str(file))
-            return FileResponse(str(_static_dir / "index.html"))
-
-        @app.get("/")
-        async def serve_root():
-            return FileResponse(str(_static_dir / "index.html"))
-
-        logger.info("Serving frontend from %s", _static_dir)
-    else:
-        @app.get("/health")
-        async def health():
-            return {"status": "healthy"}
-
-    logger.info("Application starting on %s:%s", settings.app.host, settings.app.port)
+    logger.info("Application starting on %s:%s (docker=%s)", settings.app.host, settings.app.port, _is_docker)
     yield
     svc.stop_scheduler()
     logger.info("Application shutting down")
@@ -86,13 +64,11 @@ app.add_middleware(
 )
 
 
+# ── Auth middleware ──────────────────────────────────────
 @app.middleware("http")
 async def auth_gate_middleware(request: Request, call_next):
     path = request.url.path
-    if (
-        not path.startswith("/api")
-        or path == "/api/v1/verify"
-    ):
+    if not path.startswith("/api") or path == "/api/v1/verify":
         return await call_next(request)
 
     auth = request.headers.get("authorization", "")
@@ -110,16 +86,40 @@ async def auth_gate_middleware(request: Request, call_next):
     return await call_next(request)
 
 
+# ── API 路由 ────────────────────────────────────────────
+app.include_router(router)
+
+
+# ── Health（独立于 catch-all）────────────────────────────
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}
+
+
+# ── 静态文件 + SPA fallback（Docker 环境）───────────────
+if _is_docker:
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/assets", StaticFiles(directory=str(_static_dir / "assets")), name="assets")
+
+    @app.exception_handler(404)
+    async def spa_fallback(request: Request, exc: StarletteHTTPException):
+        """非 API 请求 404 时返回 index.html（SPA 路由由前端处理）"""
+        path = request.url.path
+        if path.startswith("/api"):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
+
+        file = _static_dir / path.lstrip("/")
+        if file.is_file():
+            return FileResponse(str(file))
+        return FileResponse(str(_static_dir / "index.html"))
+
+
+# ── 通用异常处理 ────────────────────────────────────────
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error("Unhandled error: %s", exc, exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error"},
-    )
-
-
-app.include_router(router)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 if __name__ == "__main__":
