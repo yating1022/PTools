@@ -12,17 +12,19 @@ logger = logging.getLogger(__name__)
 _CFG_HOUR = "daily_import_hour"
 _CFG_COUNT = "daily_import_count"
 _CFG_ENABLED = "daily_import_enabled"
+_CFG_FOLDER = "daily_import_folder"
 
 
 def _read_cfg(db) -> dict[str, Any]:
     rows = db.query(GyConfig).filter(
-        GyConfig.key.in_([_CFG_HOUR, _CFG_COUNT, _CFG_ENABLED])
+        GyConfig.key.in_([_CFG_HOUR, _CFG_COUNT, _CFG_ENABLED, _CFG_FOLDER])
     ).all()
     cfg = {r.key: r.value for r in rows}
     return {
         "hour": int(cfg.get(_CFG_HOUR, "3")),
         "count": int(cfg.get(_CFG_COUNT, "10")),
         "enabled": cfg.get(_CFG_ENABLED, "1") == "1",
+        "folder": cfg.get(_CFG_FOLDER, ""),
     }
 
 
@@ -31,11 +33,12 @@ def _read_cloud_folder(db) -> str:
     return row.value if row else ""
 
 
-def _save_cfg(db, hour: int, count: int, enabled: bool):
+def _save_cfg(db, hour: int, count: int, enabled: bool, folder: str = ""):
     for key, value in [
         (_CFG_HOUR, str(hour)),
         (_CFG_COUNT, str(count)),
         (_CFG_ENABLED, "1" if enabled else "0"),
+        (_CFG_FOLDER, folder),
     ]:
         row = db.query(GyConfig).filter(GyConfig.key == key).first()
         if row:
@@ -63,12 +66,12 @@ class GyDailyImportService:
             cfg = _read_cfg(db)
         return cfg
 
-    def save_config(self, hour: int, count: int, enabled: bool = True):
+    def save_config(self, hour: int, count: int, enabled: bool = True, folder: str = ""):
         hour = max(0, min(23, hour))
         count = max(1, count)
         with SessionLocal() as db:
-            _save_cfg(db, hour, count, enabled)
-        logger.info("每日入库配置已更新: hour=%d, count=%d, enabled=%s", hour, count, enabled)
+            _save_cfg(db, hour, count, enabled, folder)
+        logger.info("每日入库配置已更新: hour=%d, count=%d, enabled=%s, folder=%s", hour, count, enabled, folder)
 
     # ── Status ─────────────────────────────────────────────
 
@@ -117,7 +120,7 @@ class GyDailyImportService:
     def _do_import(self) -> dict[str, Any]:
         with SessionLocal() as db:
             cfg = _read_cfg(db)
-            folder = _read_cloud_folder(db)
+            folder = cfg["folder"] or _read_cloud_folder(db)
             magnets = (
                 db.query(GyMagnet)
                 .filter(GyMagnet.downloaded == False)

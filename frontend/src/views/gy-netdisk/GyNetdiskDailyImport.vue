@@ -9,10 +9,11 @@ import {
   saveDailyImportConfig,
   triggerDailyImport,
 } from "@/api/modules/gyNetdisk";
+import FolderPicker from "@/components/FolderPicker.vue";
 
 const router = useRouter();
 
-const config = ref<DailyImportConfig>({ hour: 3, count: 10, enabled: true });
+const config = ref<DailyImportConfig>({ hour: 3, count: 10, enabled: true, folder: "" });
 const status = ref<DailyImportStatus | null>(null);
 const loading = ref(false);
 const saving = ref(false);
@@ -41,7 +42,7 @@ async function handleSave() {
   saving.value = true;
   saveMsg.value = "";
   try {
-    await saveDailyImportConfig(config.value.hour, config.value.count, config.value.enabled);
+    await saveDailyImportConfig(config.value.hour, config.value.count, config.value.enabled, config.value.folder);
     saveMsg.value = "保存成功";
     await load();
   } catch (e: any) {
@@ -130,6 +131,12 @@ onMounted(load);
                      focus:border-green-400 focus:shadow-lg focus:shadow-green-200/40
                      outline-none transition-all duration-300"
             />
+          </div>
+
+          <!-- Folder -->
+          <div class="w-full">
+            <label class="block text-xs text-green-600 mb-1">下载目录</label>
+            <FolderPicker v-model="config.folder" />
           </div>
 
           <!-- Save -->

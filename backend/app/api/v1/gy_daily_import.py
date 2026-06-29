@@ -10,6 +10,7 @@ class DailyImportConfig(BaseModel):
     hour: int = Field(default=3, ge=0, le=23)
     count: int = Field(default=10, ge=1)
     enabled: bool = True
+    folder: str = ""
 
 
 @router.get("/config")
@@ -21,7 +22,7 @@ async def get_config():
 @router.put("/config")
 async def save_config(body: DailyImportConfig):
     svc = get_gy_daily_import_service()
-    svc.save_config(body.hour, body.count, body.enabled)
+    svc.save_config(body.hour, body.count, body.enabled, body.folder)
     return svc.get_config()
 
 

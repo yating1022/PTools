@@ -174,6 +174,7 @@ export interface DailyImportConfig {
   hour: number;
   count: number;
   enabled: boolean;
+  folder: string;
 }
 
 export interface DailyImportStatus {
@@ -196,8 +197,9 @@ export function saveDailyImportConfig(
   hour: number,
   count: number,
   enabled = true,
+  folder = "",
 ): Promise<DailyImportConfig> {
-  return api.put("/gy/daily-import/config", { hour, count, enabled });
+  return api.put("/gy/daily-import/config", { hour, count, enabled, folder });
 }
 
 export function getDailyImportStatus(): Promise<DailyImportStatus> {
